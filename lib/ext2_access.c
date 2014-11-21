@@ -60,7 +60,8 @@ struct ext2_group_desc * get_block_group(void * fs, __u32 block_group_num) {
 // first one.
 struct ext2_inode * get_inode(void * fs, __u32 inode_num) {
     // FIXME: Uses reference implementation.
-    
+    void *inode_table = (void*)((char*)get_block_group(fs, 1) + 8);
+    *inode_table 
     return _ref_get_inode(fs, inode_num);
 }
 
