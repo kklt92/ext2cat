@@ -1,3 +1,5 @@
+#include <string.h>
+
 // ext2 definitions from the real driver in the Linux kernel.
 #include "ext2fs.h"
 
@@ -60,9 +62,10 @@ struct ext2_group_desc * get_block_group(void * fs, __u32 block_group_num) {
 // first one.
 struct ext2_inode * get_inode(void * fs, __u32 inode_num) {
     // FIXME: Uses reference implementation.
-    void *inode_table = (void*)((char*)get_block_group(fs, 1) + 8);
-    *inode_table 
-    return _ref_get_inode(fs, inode_num);
+    __u32 *inode_table = (__u32*)((char*)get_block_group(fs, 1) + 8);
+    void *ptr = get_block(fs, *inode_table); 
+    void *inode = (char*)ptr + 128 * (inode_num - 1);
+    return (struct ext2_inode*)inode;
 }
 
 
@@ -114,7 +117,31 @@ struct ext2_inode * get_root_dir(void * fs) {
 __u32 get_inode_from_dir(void * fs, struct ext2_inode * dir, 
         char * name) {
     // FIXME: Uses reference implementation.
-    return _ref_get_inode_from_dir(fs, dir, name);
+    struct ext2_dir_entry_2 *dir_entry = NULL;
+    int name_length;
+    void *curr_blk, *curr_ptr, *end;
+    int i=0;
+
+    name_length = strlen(name);
+    for(i=0; i<15; i++) {
+      curr_blk = get_block(fs, dir->i_block[i]);
+      end = (char*)curr_blk + get_block_size(curr_blk);
+      curr_ptr = curr_blk;
+
+      while(curr_ptr != end) {
+        dir_entry = (struct ext2_dir_entry_2*)curr_ptr;
+
+        if(dir_entry->name_len == name_length && strcmp(dir_entry->name, name)){
+          return dir_entry->inode;
+        }
+          
+        curr_ptr = (char*)curr_ptr + dir_entry->rec_len;
+      }
+        
+    }
+
+
+    return 0;
 }
 
 
@@ -122,6 +149,26 @@ __u32 get_inode_from_dir(void * fs, struct ext2_inode * dir,
 // This is the functionality that ext2cat ultimately needs.
 __u32 get_inode_by_path(void * fs, char * path) {
     // FIXME: Uses reference implementation.
-    return _ref_get_inode_by_path(fs, path);
+    struct ext2_inode *root_node = get_root_dir(fs);
+    struct ext2_inode *parent_node;
+    int index_i;
+    int i=0;
+    char **parts = split_path(path);
+
+    parent_node = root_node;
+    while(parts[i] != NULL) {
+      index_i = get_inode_from_dir(fs, parent_node, parts[i]);
+
+      if(index_i != 0) {
+        parent_node = get_inode(fs, index_i);
+        i++;
+      }else {
+        break;
+      }
+
+        
+    }
+
+    return index_i;
 }
 
