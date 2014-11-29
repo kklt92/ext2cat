@@ -100,6 +100,8 @@ char ** split_path(char * path) {
     // Get the last piece.
     parts[i] = (char *) calloc(strlen(piece_start) + 1, sizeof(char));
     strncpy(parts[i], piece_start, strlen(piece_start));
+
+    /* manual add NULL at end of parts. */
     i++;
     parts[i] = NULL;
     return parts;

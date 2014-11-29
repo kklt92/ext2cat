@@ -27,16 +27,29 @@ int main(int argc, char ** argv) {
     __u32 block_size = get_block_size(fs);
     __u32 size = target_ino->i_size;
     __u32 bytes_read = 0;
+    __u32 *ind_block = NULL;
     void * buf = calloc(size, 1);
 
     // Read the file one block at a time. In the real world, there would be a
     // lot of error-handling code here.
     __u32 bytes_left;
-    for (int i = 0; i < EXT2_NDIR_BLOCKS; i++) {
+    for (int i = 0; i < (int)size; i++) {
         bytes_left = size - bytes_read;
         if (bytes_left == 0) break;
         __u32 bytes_to_read = bytes_left > block_size ? block_size : bytes_left;
-        void * block = get_block(fs, target_ino->i_block[i]);
+        void *block = NULL;
+        if(i < EXT2_NDIR_BLOCKS) {
+          block = get_block(fs, target_ino->i_block[i]);
+        }else if(i >= EXT2_NDIR_BLOCKS && i < EXT2_NDIR_BLOCKS + ((int)block_size/4) ) {
+          /* handle indirect block */
+          ind_block = (__u32*)get_block(fs, target_ino->i_block[EXT2_IND_BLOCK]);
+          block = get_block(fs, ind_block[i - EXT2_NDIR_BLOCKS]);
+        }else if(i >= EXT2_NDIR_BLOCKS + ((int)block_size/4) && i< EXT2_NDIR_BLOCKS + (int)block_size/4 + ((int)block_size/4)*((int)block_size/4) ) {
+          //ind_block = (__u32*)get_block(fs, target_ino->i_block[EXT2_DIND_BLOCK]);
+
+          
+        }
+    
         memcpy(buf + bytes_read, block, bytes_to_read);
         bytes_read += bytes_to_read;
     }
