@@ -62,7 +62,7 @@ struct ext2_group_desc * get_block_group(void * fs, __u32 block_group_num) {
 // first one.
 struct ext2_inode * get_inode(void * fs, __u32 inode_num) {
     // FIXME: Uses reference implementation.
-    __u32 *inode_table = (__u32*)((char*)get_block_group(fs, 1) + 8);
+    __u32 *inode_table = (__u32*)((char*)get_block_group(fs, 0) + 8);
     void *ptr = get_block(fs, *inode_table); 
     void *inode = (char*)ptr + 128 * (inode_num - 1);
     return (struct ext2_inode*)inode;
@@ -100,6 +100,8 @@ char ** split_path(char * path) {
     // Get the last piece.
     parts[i] = (char *) calloc(strlen(piece_start) + 1, sizeof(char));
     strncpy(parts[i], piece_start, strlen(piece_start));
+    i++;
+    parts[i] = NULL;
     return parts;
 }
 
@@ -125,13 +127,13 @@ __u32 get_inode_from_dir(void * fs, struct ext2_inode * dir,
     name_length = strlen(name);
     for(i=0; i<15; i++) {
       curr_blk = get_block(fs, dir->i_block[i]);
-      end = (char*)curr_blk + get_block_size(curr_blk);
+      end = (char*)curr_blk + get_block_size(fs);
       curr_ptr = curr_blk;
 
       while(curr_ptr != end) {
         dir_entry = (struct ext2_dir_entry_2*)curr_ptr;
 
-        if(dir_entry->name_len == name_length && strcmp(dir_entry->name, name)){
+        if(dir_entry->name_len == name_length && strncmp(dir_entry->name, name, name_length) == 0){
           return dir_entry->inode;
         }
           
@@ -156,7 +158,7 @@ __u32 get_inode_by_path(void * fs, char * path) {
     char **parts = split_path(path);
 
     parent_node = root_node;
-    while(parts[i] != NULL) {
+    while(parts[i]) {
       index_i = get_inode_from_dir(fs, parent_node, parts[i]);
 
       if(index_i != 0) {
