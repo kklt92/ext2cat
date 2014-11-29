@@ -37,7 +37,7 @@ __u32 get_block_size(void * fs) {
 // Return a pointer to a block given its number.
 // get_block(fs, 0) == fs;
 void * get_block(void * fs, __u32 block_num) {
-    // FIXME: Uses reference implementation.
+    // calculate blk point by plus the size of it from original point address
     void *blk = (char*)fs + get_block_size(fs) * block_num;
     return blk;
 }
@@ -47,7 +47,7 @@ void * get_block(void * fs, __u32 block_num) {
 // ext2 filesystems will have several of these, but, for simplicity, we will
 // assume there is only one.
 struct ext2_group_desc * get_block_group(void * fs, __u32 block_group_num) {
-    // FIXME: Uses reference implementation.
+    // assume there are only one block group and return it.
     int i=0;
     while((char*)fs + i * get_block_size(fs) < (char*)get_super_block(fs) + 1024) {
       i++;
@@ -61,7 +61,7 @@ struct ext2_group_desc * get_block_group(void * fs, __u32 block_group_num) {
 // would require finding the correct block group, but you may assume it's in the
 // first one.
 struct ext2_inode * get_inode(void * fs, __u32 inode_num) {
-    // FIXME: Uses reference implementation.
+    // return inode by calculate the 8 offset from block group.
     __u32 *inode_table = (__u32*)((char*)get_block_group(fs, 0) + 8);
     void *ptr = get_block(fs, *inode_table); 
     void *inode = (char*)ptr + 128 * (inode_num - 1);
@@ -127,6 +127,11 @@ __u32 get_inode_from_dir(void * fs, struct ext2_inode * dir,
     int i=0;
 
     name_length = strlen(name);
+    /**
+     * there are only 15 blocks for a directory. 
+     * but the 13th, 14th, 15th are indirect block. 
+     * TODO: complete indirect block for very large directory content.
+     **/
     for(i=0; i<15; i++) {
       curr_blk = get_block(fs, dir->i_block[i]);
       end = (char*)curr_blk + get_block_size(fs);
@@ -135,6 +140,7 @@ __u32 get_inode_from_dir(void * fs, struct ext2_inode * dir,
       while(curr_ptr != end) {
         dir_entry = (struct ext2_dir_entry_2*)curr_ptr;
 
+        // if length and name is correct then return the inode number.
         if(dir_entry->name_len == name_length && strncmp(dir_entry->name, name, name_length) == 0){
           return dir_entry->inode;
         }
@@ -163,6 +169,7 @@ __u32 get_inode_by_path(void * fs, char * path) {
     while(parts[i]) {
       index_i = get_inode_from_dir(fs, parent_node, parts[i]);
 
+      /* if the return value from get_inode_from_dir is invalid, then break the loop */
       if(index_i != 0) {
         parent_node = get_inode(fs, index_i);
         i++;
