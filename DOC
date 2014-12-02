@@ -1,0 +1,16 @@
+Implemented a read-only driver for ext2, a standard filesystem supported by the Linux kernel. The reference blob and the code will both be used by ext2cat, a simple program included with the project that retrieves the content of a file from an ext2 image and prints it to stdout.
+
+ext2_super_block * get_super_block() returns a pointer to the primary superblock of a filesystem.
+
+get_block_size() returns the block size for a filesystem.
+
+get_block() returns a pointer to a block given its number.
+
+ext2_group_desc * get_block_group() returns a pointer to the first block group descripter in a filesystem.
+
+ext2_inode * get_inode() returns a pointer to an inode given its number. 
+
+get_inode_from_dir() returns the inode number of the file inside the directory.
+
+get_inode_by_path() finds the inode number for a file by its full path.
+
